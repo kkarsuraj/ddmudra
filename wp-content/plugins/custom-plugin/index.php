@@ -3,7 +3,7 @@
  * Plugin Name: KPI Dashboard
  * Description: Adds a KPI menu page with dynamic Projects and Tasks fields, including checkboxes and date selectors.
  * Version: 1.3
- * Author: Your Name
+ * Author: Suraj Karmakar
  */
 
 if (!defined('ABSPATH')) {
