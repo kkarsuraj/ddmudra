@@ -29,15 +29,20 @@ function kpi_add_admin_menu() {
 function kpi_dashboard_page() {
     // Fetch saved projects and tasks
     $projects = get_option('kpi_projects', []);
+    $buffer_period = get_option('kpi_buffer_period', 0); // Get saved value, default to 0
     $projects = is_array($projects) ? $projects : [];
     ?>
     <div class="wrap">
         <h1>KPI Dashboard</h1>
         <p>Manage your projects and tasks dynamically.</p>
-
         <form method="post" action="">
             <?php wp_nonce_field('kpi_save_data', 'kpi_nonce'); ?>
 
+            <label for="buffer-period">Buffer Period:
+                <input type="number" style="margin-bottom: 10px; width: 50px;"
+                    name="buffer_period" min="0" max="100" step="1"
+                    value="<?php echo esc_attr($buffer_period); ?>" />
+            </label>
             <div id="project-container">
                 <?php
                 if (!empty($projects)) {
@@ -47,25 +52,34 @@ function kpi_dashboard_page() {
                             <input type="text" name="projects[' . $project_index . '][name]" value="' . esc_attr($project['name']) . '" placeholder="Project Name">
                             <button type="button" class="remove-project button button-primary">Remove Project</button>
                             <div class="project-wrapper">
-                                <div class="task-container">';
+                                <table class="task-container">';
                                     if (!empty($tasks)) {
+                                        echo '<tr class="task-field">
+                                            <th>Checkbox</th>
+                                            <th>Task Name</th>
+                                            <th>Expected Start Date</th>
+                                            <th>Expected End Date</th>
+                                            <th>Actual End Date</th>
+                                            <th>Completion Percentage</th>
+                                            <th>Action</th>
+                                        </tr>';
                                         foreach ($tasks as $task_index => $task) {
-                                            echo '<div class="task-field" data-index="' . $task_index . '">
-                                                <input type="checkbox" name="projects[' . $project_index . '][tasks][' . $task_index . '][completed]" ' . (isset($task['completed']) && $task['completed']=='completed' ? 'checked' : '') . ' disabled>
-                                                <input type="text" name="projects[' . $project_index . '][tasks][' . $task_index . '][name]" value="' . esc_attr($task['name']) . '" placeholder="Task Name" required>
-                                                <input type="date" name="projects[' . $project_index . '][tasks][' . $task_index . '][expected_start_date]" value="' . esc_attr($task['expected_start_date'] ?? '') . '" required>
-                                                <input type="date" name="projects[' . $project_index . '][tasks][' . $task_index . '][expected_end_date]" value="' . esc_attr($task['expected_end_date'] ?? '') . '" required>
-                                                <input type="date" name="projects[' . $project_index . '][tasks][' . $task_index . '][actual_end_date]" value="' . esc_attr($task['actual_end_date'] ?? '') . '">
-                                                <input type="range" min="0" max="100" step="1"
+                                            echo '<tr class="task-field" data-index="' . $task_index . '">
+                                                <td><input type="checkbox" name="projects[' . $project_index . '][tasks][' . $task_index . '][completed]" ' . (isset($task['completed']) && $task['completed']=='completed' ? 'checked' : '') . ' disabled></td>
+                                                <td><input type="text" name="projects[' . $project_index . '][tasks][' . $task_index . '][name]" value="' . esc_attr($task['name']) . '" placeholder="Task Name" required></td>
+                                                <td><input type="date" name="projects[' . $project_index . '][tasks][' . $task_index . '][expected_start_date]" value="' . esc_attr($task['expected_start_date'] ?? '') . '" required></td>
+                                                <td><input type="date" name="projects[' . $project_index . '][tasks][' . $task_index . '][expected_end_date]" value="' . esc_attr($task['expected_end_date'] ?? '') . '" required></td>
+                                                <td><input type="date" name="projects[' . $project_index . '][tasks][' . $task_index . '][actual_end_date]" value="' . esc_attr($task['actual_end_date'] ?? '') . '"></td>
+                                                <td><input type="range" min="0" max="100" step="1"
                                                     name="projects[' . $project_index . '][tasks][' . $task_index . '][completion_percentage]"
                                                     value="' . esc_attr($task['completion_percentage'] ?? 0) . '"
                                                     oninput="this.nextElementSibling.value = this.value">
-                                                <output>' . esc_attr($task['completion_percentage'] ?? 0) . '</output>%
-                                                <button type="button" class="remove-task button button button-primary">Remove</button>
-                                            </div>';
+                                                <output>' . esc_attr($task['completion_percentage'] ?? 0) . '</output>%</td>
+                                                <td><button type="button" class="remove-task button button button-primary">Remove</button></td>
+                                            </tr>';
                                         }
                                     }
-                                echo '</div>
+                                echo '</table>
                                     <p class="completion-percentage">';
                                         if (!empty($tasks)){
                                             $completionPercentages = array_column($tasks, 'completion_percentage');
@@ -101,7 +115,7 @@ function kpi_dashboard_page() {
                                             $statusArray[$expected] = $daysDifference;
                                         }
                                         $average_status = array_sum($statusArray);
-                                        if ($average_status > 0) {
+                                        if ($average_status > $buffer_period) {
                                             echo '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M6 8L2 8L2 6L8 5.24536e-07L14 6L14 8L10 8L10 16L6 16L6 8Z" fill="#00FF00"></path> </g></svg>';
                                         } elseif ($average_status < 0) {
                                             echo '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#000000" transform="rotate(180)"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M6 8L2 8L2 6L8 5.24536e-07L14 6L14 8L10 8L10 16L6 16L6 8Z" fill="#FF0000"></path> </g></svg>';
@@ -162,19 +176,19 @@ function kpi_dashboard_page() {
                 let lastIndex = lastTask ? parseInt(lastTask.getAttribute('data-index')) : -1;
                 let taskIndex = lastIndex + 1;
                 let taskHTML = `
-                    <div class="task-field" data-index="${taskIndex}">
-                        <input type="checkbox" name="projects[${projectIndex}][tasks][${taskIndex}][completed]" disabled>
-                        <input type="text" name="projects[${projectIndex}][tasks][${taskIndex}][name]" placeholder="Task Name" required>
-                        <input type="date" name="projects[${projectIndex}][tasks][${taskIndex}][expected_start_date]" required>
-                        <input type="date" name="projects[${projectIndex}][tasks][${taskIndex}][expected_end_date]" required>
-                        <input type="date" name="projects[${projectIndex}][tasks][${taskIndex}][actual_end_date]">
-                        <input type="range" min="0" max="100" step="1"
+                    <tr class="task-field" data-index="${taskIndex}">
+                        <td><input type="checkbox" name="projects[${projectIndex}][tasks][${taskIndex}][completed]" disabled></td>
+                        <td><input type="text" name="projects[${projectIndex}][tasks][${taskIndex}][name]" placeholder="Task Name" required></td>
+                        <td><input type="date" name="projects[${projectIndex}][tasks][${taskIndex}][expected_start_date]" required></td>
+                        <td><input type="date" name="projects[${projectIndex}][tasks][${taskIndex}][expected_end_date]" required></td>
+                        <td><input type="date" name="projects[${projectIndex}][tasks][${taskIndex}][actual_end_date]"></td>
+                        <td><input type="range" min="0" max="100" step="1"
                             name="projects[${projectIndex}][tasks][${taskIndex}][completion_percentage]"
                             value="0"
                             oninput="this.nextElementSibling.value = this.value">
-                        <output>0</output>%
-                        <button type="button" class="remove-task button button-primary">Remove</button>
-                    </div>
+                        <output>0</output>%</td>
+                        <td><button type="button" class="remove-task button button-primary">Remove</button></td>
+                    </tr>
                 `;
                 taskContainer.insertAdjacentHTML('beforeend', taskHTML);
             }
@@ -183,18 +197,19 @@ function kpi_dashboard_page() {
         // Function to remove a task
         projectContainer.addEventListener('click', function (event) {
             if (event.target.classList.contains('remove-task')) {
-                event.target.parentElement.remove();
+                event.target.parentElement.parentElement.remove();
             }
         });
     });
     </script>
 
     <style>
-    .task-container { margin-top: 10px; }
+    .task-container { border-spacing: 10px 5px; }
     .project-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
-    .task-field { display: flex; align-items: center; margin-bottom: 10px; }
-    .task-field input { margin-right: 10px; }
-    .remove-task { margin-left: 10px !important; }
+    /* .task-field { display: flex; align-items: center; margin-bottom: 10px; } */
+    th { text-align: start; }
+    /* .task-field input { margin-right: 10px; } */
+    /* .remove-task { margin-left: 10px !important; } */
     input[type=checkbox]:disabled { opacity: 1 !important; }
     .project-wrapper { display: flex; justify-content: space-around; align-items: center; }
     .completion-position { width: 50px; }
@@ -209,6 +224,10 @@ add_action('admin_init', 'kpi_save_project_data');
 
 function kpi_save_project_data() {
     if (isset($_POST['save_kpi_data']) && check_admin_referer('kpi_save_data', 'kpi_nonce')) {
+        if (isset($_POST['buffer_period'])) {
+            $buffer_period = intval($_POST['buffer_period']); // Sanitize input
+            update_option('kpi_buffer_period', $buffer_period);
+        }
         $projects = isset($_POST['projects']) ? array_map(function ($project) {
             return [
                 'name'  => sanitize_text_field($project['name']),
